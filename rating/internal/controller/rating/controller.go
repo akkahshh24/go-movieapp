@@ -28,6 +28,7 @@ func New(repo ratingRepository) *Controller {
 
 // GetAggregatedRating returns the aggregated rating for a record or ErrNotFound if there are no ratings for it.
 func (c *Controller) GetAggregatedRating(ctx context.Context, recordID model.RecordID, recordType model.RecordType) (float64, error) {
+	// Get the ratings from the repository.
 	ratings, err := c.repo.Get(ctx, recordID, recordType)
 	if err != nil && errors.Is(err, repository.ErrNotFound) {
 		// Here, we checked with the error defined in the repository layer
@@ -36,6 +37,8 @@ func (c *Controller) GetAggregatedRating(ctx context.Context, recordID model.Rec
 	} else if err != nil {
 		return 0, err
 	}
+
+	// Calculate the aggregated rating.
 	sum := float64(0)
 	for _, r := range ratings {
 		sum += float64(r.Value)

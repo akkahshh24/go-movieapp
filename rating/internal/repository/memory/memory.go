@@ -20,9 +20,12 @@ func New() *Repository {
 
 // Get retrieves all ratings for a given record.
 func (r *Repository) Get(ctx context.Context, recordID model.RecordID, recordType model.RecordType) ([]model.Rating, error) {
+	// Check if the record type exists in the repository.
 	if _, ok := r.data[recordType]; !ok {
 		return nil, repository.ErrNotFound
 	}
+
+	// Check if the record ID exists for the given record type.
 	if ratings, ok := r.data[recordType][recordID]; !ok || len(ratings) == 0 {
 		return nil, repository.ErrNotFound
 	}
@@ -31,9 +34,12 @@ func (r *Repository) Get(ctx context.Context, recordID model.RecordID, recordTyp
 
 // Put adds a rating for a given record.
 func (r *Repository) Put(ctx context.Context, recordID model.RecordID, recordType model.RecordType, rating *model.Rating) error {
+	// Initialize the record type map if it doesn't exist.
 	if _, ok := r.data[recordType]; !ok {
 		r.data[recordType] = map[model.RecordID][]model.Rating{}
 	}
+
+	// Initialize the record ID slice if it doesn't exist.
 	r.data[recordType][recordID] = append(r.data[recordType][recordID], *rating)
 	return nil
 }

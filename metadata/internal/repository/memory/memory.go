@@ -21,7 +21,11 @@ func New() *Repository {
 
 // Get retrieves movie metadata by movie id.
 func (r *Repository) Get(_ context.Context, id string) (*model.Metadata, error) {
+	// Use a read lock to ensure thread safety
+	// while accessing the in-memory data.
+	// This prevents concurrent writes from causing inconsistencies.
 	r.RLock()
+	// Ensure to unlock the read lock after accessing the data.
 	defer r.RUnlock()
 	m, ok := r.data[id]
 	if !ok {
