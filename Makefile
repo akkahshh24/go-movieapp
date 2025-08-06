@@ -31,10 +31,19 @@ movie3:
 consul:
 	docker run -d -p 8500:8500 -p 8600:8600/udp --name dev-consul hashicorp/consul agent -server -ui -node=server-1 -bootstrap-expect=1 -client='0.0.0.0'
 
+kafka:
+	cd cmd/ratingproducer && docker compose up -d
+
+create-topic:
+	docker exec -it kafka kafka-topics --zookeeper zookeeper:2181 --replication-factor 1 --partitions 1 --create --topic ratings
+
+producer:
+	cd cmd/ratingproducer && go run main.go
+
 proto:
 	protoc -I=api --go_out=. --go-grpc_out=. movie.proto
 
 benchmark:
 	cd cmd/sizecompare && go test -bench=.
 
-.PHONY: metadata1 metadata2 metadata3 rating1 rating2 rating3 movie1 movie2 movie3 testrating1 consul proto benchmark
+.PHONY: metadata1 metadata2 metadata3 rating1 rating2 rating3 movie1 movie2 movie3 testrating1 consul kafka create-topic producer proto benchmark
