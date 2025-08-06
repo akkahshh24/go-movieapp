@@ -35,7 +35,7 @@ kafka:
 	cd cmd/ratingproducer && docker compose up -d
 
 create-topic:
-	docker exec -it kafka kafka-topics --zookeeper zookeeper:2181 --replication-factor 1 --partitions 1 --create --topic ratings
+	docker exec -it kafka kafka-topics.sh --zookeeper zookeeper:2181 --replication-factor 1 --partitions 1 --create --topic test-topic-1
 
 producer:
 	cd cmd/ratingproducer && go run main.go
