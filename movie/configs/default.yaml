@@ -1,0 +1,6 @@
+api:
+  port: 8083
+serviceDiscovery:
+  name: movie
+  consul:
+    address: http://consul-server.consul.svc.cluster.local:8500

@@ -1,0 +1,54 @@
+# Start minikube
+minikube start
+
+# Check status
+minikube status
+
+# Stop and delete the cluster
+minikube stop
+minikube delete --all --purge
+
+# Add HashiCorp Helm repo
+helm repo add hashicorp https://helm.releases.hashicorp.com
+helm repo update
+
+# Install Consul
+helm install consul hashicorp/consul --set global.name=consul --create-namespace --namespace consul
+
+# Access Consul UI
+kubectl port-forward -n consul service/consul-server 8500:8500
+
+# Add Bitnami Helm repo
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo update
+
+# Install Kafka
+helm install kafka bitnami/kafka \
+  --namespace kafka \
+  --create-namespace \
+  --set listeners.client.protocol=PLAINTEXT \
+  --set allowPlaintextListener=true
+
+# Install MySQL
+helm install mysql bitnami/mysql \
+  --set auth.rootPassword=password \
+  --set primary.persistence.enabled=false \
+  --namespace database --create-namespace
+
+# Test connectivity
+kubectl exec -it <rating-pod> -- nc -vz kafka.kafka.svc.cluster.local 9092
+
+# Check docker images in minikube node
+minikube ssh
+docker images
+
+# Build binary
+GOOS=linux go build -o main cmd/*.go
+
+# Point docker to minikube registry
+eval $(minikube -p minikube docker-env)
+
+# Build docker images
+docker build -t metadata:latest .
+docker build -t rating:latest .
+docker build -t movie:latest .

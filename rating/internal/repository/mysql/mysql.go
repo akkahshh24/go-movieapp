@@ -8,19 +8,14 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-const (
-	driverName     = "mysql"
-	dataSourceName = "root:password@/movieapp"
-)
-
 // Repository defines a MySQL-based rating repository.
 type Repository struct {
 	db *sql.DB
 }
 
 // New creates a new MySQL-based rating repository.
-func New() (*Repository, error) {
-	db, err := sql.Open(driverName, dataSourceName)
+func New(dsn string) (*Repository, error) {
+	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, err
 	}

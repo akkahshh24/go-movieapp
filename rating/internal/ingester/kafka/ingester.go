@@ -4,60 +4,58 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/akkahshh24/movieapp/rating/pkg/model"
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/segmentio/kafka-go"
 )
 
 // Ingester defines a Kafka ingester.
 type Ingester struct {
-	consumer *kafka.Consumer
-	topic    string
+	reader *kafka.Reader
 }
 
 // NewIngester creates a new Kafka ingester.
 func NewIngester(addr string, groupID string, topic string) (*Ingester, error) {
-	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers": addr,
-		"group.id":          groupID,
-		"auto.offset.reset": "earliest",
+	reader := kafka.NewReader(kafka.ReaderConfig{
+		Brokers:     []string{addr},
+		GroupID:     groupID,
+		Topic:       topic,
+		MinBytes:    10e3, // 10KB
+		MaxBytes:    10e6, // 10MB
+		StartOffset: kafka.FirstOffset,
+		MaxWait:     time.Second,
 	})
-	if err != nil {
-		return nil, err
-	}
-	return &Ingester{consumer, topic}, nil
+	return &Ingester{reader: reader}, nil
 }
 
-// Ingest starts ingestion from Kafka and returns a channel containing rating events
-// representing the data consumed from the topic.
+// Ingest starts reading messages from Kafka and sends them over a channel.
 func (i *Ingester) Ingest(ctx context.Context) (chan model.RatingEvent, error) {
 	fmt.Println("Starting Kafka ingester")
-	if err := i.consumer.SubscribeTopics([]string{i.topic}, nil); err != nil {
-		return nil, err
-	}
 
 	ch := make(chan model.RatingEvent, 1)
 	go func() {
+		defer close(ch)
+		defer i.reader.Close()
+
 		for {
-			select {
-			case <-ctx.Done():
-				close(ch)
-				i.consumer.Close()
-				return
-			default:
-			}
-			msg, err := i.consumer.ReadMessage(-1)
+			m, err := i.reader.ReadMessage(ctx)
 			if err != nil {
-				fmt.Println("Consumer error: " + err.Error())
+				if ctx.Err() != nil {
+					return
+				}
+				fmt.Println("Kafka read error:", err)
 				continue
 			}
+
 			var event model.RatingEvent
-			if err := json.Unmarshal(msg.Value, &event); err != nil {
-				fmt.Println("Unmarshal error: " + err.Error())
+			if err := json.Unmarshal(m.Value, &event); err != nil {
+				fmt.Println("Unmarshal error:", err)
 				continue
 			}
 			ch <- event
 		}
 	}()
+
 	return ch, nil
 }

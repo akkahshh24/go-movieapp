@@ -2,15 +2,16 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"time"
 
 	"github.com/akkahshh24/movieapp/gen"
 	"github.com/akkahshh24/movieapp/pkg/discovery"
 	"github.com/akkahshh24/movieapp/pkg/discovery/consul"
+	"github.com/akkahshh24/movieapp/pkg/model"
 	"github.com/akkahshh24/movieapp/rating/internal/cache/memory"
 	"github.com/akkahshh24/movieapp/rating/internal/controller/rating"
 	grpchandler "github.com/akkahshh24/movieapp/rating/internal/handler/grpc"
@@ -18,29 +19,35 @@ import (
 	"github.com/akkahshh24/movieapp/rating/internal/repository/mysql"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	"gopkg.in/yaml.v3"
 )
 
-const serviceName = "rating"
-
 func main() {
-	// Take the port from command line arguments
-	// Default to 8082 if not provided.
-	var port int
-	flag.IntVar(&port, "port", 8082, "API handler port")
-	flag.Parse()
+	f, err := os.Open("default.yaml")
+	if err != nil {
+		panic(err)
+	}
+
+	var cfg config
+	if err := yaml.NewDecoder(f).Decode(&cfg); err != nil {
+		panic(err)
+	}
+
+	port := cfg.API.Port
 	log.Printf("Starting the rating service on port %d", port)
 
 	// Create a new Consul registry
 	// This will be used for service discovery.
-	registry, err := consul.NewRegistry("localhost:8500")
+	registry, err := consul.NewRegistry(cfg.ServiceDiscovery.Consul.Address)
 	if err != nil {
 		panic(err)
 	}
 
 	// Register the rating service.
 	ctx := context.Background()
+	serviceName := model.ServiceName(cfg.ServiceDiscovery.Name)
 	instanceID := discovery.GenerateInstanceID(serviceName)
-	if err := registry.Register(ctx, instanceID, serviceName, fmt.Sprintf("localhost:%d", port)); err != nil {
+	if err := registry.Register(ctx, instanceID, serviceName, fmt.Sprintf("%s:%d", serviceName, port)); err != nil {
 		panic(err)
 	}
 
@@ -59,16 +66,24 @@ func main() {
 	// Create and in-memory or mysql repository.
 	// Here we are using MySQL as the repository.
 	// You can switch to an in-memory repository for testing purposes.
-	repo, err := mysql.New()
+	// Construct DSN in the form: user:password@tcp(host:port)/dbname
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s",
+		cfg.Database.User, cfg.Database.Password, cfg.Database.Host, cfg.Database.Port, cfg.Database.DBName,
+	)
+
+	repo, err := mysql.New(dsn)
 	if err != nil {
 		panic(err)
 	}
 	cache := memory.New()
-	ingester, err := kafka.NewIngester("localhost", "rating", "ratings")
+
+	ingester, err := kafka.NewIngester(cfg.MessageQueue.Address, cfg.MessageQueue.GroupID, cfg.MessageQueue.Topic)
 	if err != nil {
 		log.Fatalf("failed to initialize ingester: %v", err)
 	}
+
 	ctrl := rating.New(repo, cache, ingester)
+
 	// Start the consumer to ingest rating events.
 	// This will listen to the Kafka topic and process incoming rating events.
 	go func() {

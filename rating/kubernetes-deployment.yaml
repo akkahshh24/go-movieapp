@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rating
+spec:
+  replicas: 2
+  # selector specifies what pods to deploy
+  selector:
+    matchLabels:
+      app: rating
+  # template defines our pod configuration
+  template:
+    metadata:
+      # specifies labels to add to our pods
+      labels:
+        app: rating
+    spec:
+      containers:
+      - name: rating
+        image: rating:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 8082

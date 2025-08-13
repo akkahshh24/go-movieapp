@@ -1,0 +1,16 @@
+api:
+  port: 8082
+serviceDiscovery:
+  name: rating
+  consul:
+    address: http://consul-server.consul.svc.cluster.local:8500
+messageQueue:
+  address: kafka.kafka.svc.cluster.local:9092
+  groupID: rating
+  topic: ratings
+database:
+  host: mysql.database.svc.cluster.local
+  port: 3306
+  user: root
+  password: password
+  dbname: movieapp
