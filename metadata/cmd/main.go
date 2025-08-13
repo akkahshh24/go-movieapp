@@ -12,6 +12,7 @@ import (
 	"github.com/akkahshh24/movieapp/metadata/internal/controller/metadata"
 	grpchandler "github.com/akkahshh24/movieapp/metadata/internal/handler/grpc"
 	"github.com/akkahshh24/movieapp/metadata/internal/repository/memory"
+	"github.com/akkahshh24/movieapp/metadata/internal/repository/mysql"
 	"github.com/akkahshh24/movieapp/metadata/pkg/constant"
 	"github.com/akkahshh24/movieapp/pkg/discovery"
 	"github.com/akkahshh24/movieapp/pkg/discovery/consul"
@@ -54,8 +55,12 @@ func main() {
 	// Deregister the service on exit
 	defer registry.Deregister(ctx, instanceID, constant.ServiceNameMetadata)
 
-	repo := memory.New()
-	ctrl := metadata.New(repo)
+	repo, err := mysql.New()
+	if err != nil {
+		panic(err)
+	}
+	cache := memory.New()
+	ctrl := metadata.New(repo, cache)
 
 	/* HTTP handler setup
 	h := httphandler.New(ctrl)

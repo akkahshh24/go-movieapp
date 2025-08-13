@@ -19,7 +19,7 @@ func New() *Repository {
 }
 
 // Get retrieves all ratings for a given record.
-func (r *Repository) Get(ctx context.Context, recordID model.RecordID, recordType model.RecordType) ([]model.Rating, error) {
+func (r *Repository) Get(_ context.Context, recordID model.RecordID, recordType model.RecordType) ([]model.Rating, error) {
 	// Check if the record type exists in the repository.
 	if _, ok := r.data[recordType]; !ok {
 		return nil, repository.ErrNotFound
@@ -33,7 +33,7 @@ func (r *Repository) Get(ctx context.Context, recordID model.RecordID, recordTyp
 }
 
 // Put adds a rating for a given record.
-func (r *Repository) Put(ctx context.Context, recordID model.RecordID, recordType model.RecordType, rating *model.Rating) error {
+func (r *Repository) Put(_ context.Context, recordID model.RecordID, recordType model.RecordType, rating *model.Rating) error {
 	// Initialize the record type map if it doesn't exist.
 	if _, ok := r.data[recordType]; !ok {
 		r.data[recordType] = map[model.RecordID][]model.Rating{}

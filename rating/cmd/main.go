@@ -11,10 +11,11 @@ import (
 	"github.com/akkahshh24/movieapp/gen"
 	"github.com/akkahshh24/movieapp/pkg/discovery"
 	"github.com/akkahshh24/movieapp/pkg/discovery/consul"
+	"github.com/akkahshh24/movieapp/rating/internal/cache/memory"
 	"github.com/akkahshh24/movieapp/rating/internal/controller/rating"
 	grpchandler "github.com/akkahshh24/movieapp/rating/internal/handler/grpc"
 	"github.com/akkahshh24/movieapp/rating/internal/ingester/kafka"
-	"github.com/akkahshh24/movieapp/rating/internal/repository/memory"
+	"github.com/akkahshh24/movieapp/rating/internal/repository/mysql"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -55,18 +56,26 @@ func main() {
 	// Deregister the service on exit.
 	defer registry.Deregister(ctx, instanceID, serviceName)
 
-	// Create the repository and controller.
-	repo := memory.New()
+	// Create and in-memory or mysql repository.
+	// Here we are using MySQL as the repository.
+	// You can switch to an in-memory repository for testing purposes.
+	repo, err := mysql.New()
+	if err != nil {
+		panic(err)
+	}
+	cache := memory.New()
 	ingester, err := kafka.NewIngester("localhost", "rating", "ratings")
 	if err != nil {
 		log.Fatalf("failed to initialize ingester: %v", err)
 	}
-	ctrl := rating.New(repo, ingester)
+	ctrl := rating.New(repo, cache, ingester)
 	// Start the consumer to ingest rating events.
 	// This will listen to the Kafka topic and process incoming rating events.
-	if err := ctrl.StartIngestion(ctx); err != nil {
-		log.Fatalf("failed to start ingestion: %v", err)
-	}
+	go func() {
+		if err := ctrl.StartIngestion(ctx); err != nil {
+			log.Fatalf("failed to start ingestion: %v", err)
+		}
+	}()
 
 	// Create the gRPC handler and register it with the gRPC server.
 	// This handler will implement the gRPC service methods.
