@@ -10,8 +10,8 @@ import (
 
 	"github.com/akkahshh24/movieapp/gen"
 	"github.com/akkahshh24/movieapp/movie/internal/controller/movie"
-	metadatagateway "github.com/akkahshh24/movieapp/movie/internal/gateway/metadata/http"
-	ratinggateway "github.com/akkahshh24/movieapp/movie/internal/gateway/rating/http"
+	metadatagateway "github.com/akkahshh24/movieapp/movie/internal/gateway/metadata/grpc"
+	ratinggateway "github.com/akkahshh24/movieapp/movie/internal/gateway/rating/grpc"
 	grpchandler "github.com/akkahshh24/movieapp/movie/internal/handler/grpc"
 	"github.com/akkahshh24/movieapp/pkg/discovery"
 	"github.com/akkahshh24/movieapp/pkg/discovery/consul"

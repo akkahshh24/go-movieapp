@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/akkahshh24/movieapp/rating/internal/repository"
 	"github.com/akkahshh24/movieapp/rating/pkg/model"
@@ -43,7 +44,7 @@ func (c *Controller) GetAggregatedRating(ctx context.Context, recordID model.Rec
 	// Get the aggregated rating from the cache first.
 	cacheRes, err := c.cache.Get(ctx, recordID, recordType)
 	if err == nil {
-		fmt.Println("Returning aggregated rating from cache for record:", recordID)
+		log.Println("Returning aggregated rating from cache for record:", recordID)
 		return cacheRes, nil
 	}
 
@@ -63,7 +64,7 @@ func (c *Controller) GetAggregatedRating(ctx context.Context, recordID model.Rec
 
 	// Update the cache with the aggregated rating.
 	if err := c.cache.Put(ctx, recordID, recordType, aggregatedRating); err != nil {
-		fmt.Println("Error updating cache with aggregated rating:", err.Error())
+		log.Println("Error updating cache with aggregated rating:", err.Error())
 	}
 
 	return aggregatedRating, nil
@@ -71,7 +72,30 @@ func (c *Controller) GetAggregatedRating(ctx context.Context, recordID model.Rec
 
 // PutRating writes a rating for a given record.
 func (c *Controller) PutRating(ctx context.Context, recordID model.RecordID, recordType model.RecordType, rating *model.Rating) error {
-	return c.repo.Put(ctx, recordID, recordType, rating)
+	if err := c.repo.Put(ctx, recordID, recordType, rating); err != nil {
+		return fmt.Errorf("put rating: %w", err)
+	}
+
+	ratings, err := c.repo.Get(ctx, recordID, recordType)
+	if err != nil && err == repository.ErrNotFound {
+		return ErrNotFound
+	} else if err != nil {
+		return err
+	}
+
+	sum := float64(0)
+	for _, r := range ratings {
+		sum += float64(r.Value)
+	}
+
+	aggregatedRating := sum / float64(len(ratings))
+
+	// Update the cache with the aggregated rating.
+	if err := c.cache.Put(ctx, recordID, recordType, aggregatedRating); err != nil {
+		fmt.Println("Error updating cache with aggregated rating:", err.Error())
+	}
+
+	return nil
 }
 
 // StartIngestion starts the ingestion of rating events.

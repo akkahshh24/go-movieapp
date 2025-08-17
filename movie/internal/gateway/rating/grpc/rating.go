@@ -7,6 +7,7 @@ import (
 	"github.com/akkahshh24/movieapp/internal/grpcutil"
 	"github.com/akkahshh24/movieapp/pkg/discovery"
 	"github.com/akkahshh24/movieapp/rating/pkg/model"
+	ratingmodel "github.com/akkahshh24/movieapp/rating/pkg/model"
 )
 
 // Gateway defines an gRPC gateway for a rating service.
@@ -39,4 +40,23 @@ func (g *Gateway) GetAggregatedRating(ctx context.Context, recordID model.Record
 		return 0, err
 	}
 	return resp.RatingValue, nil
+}
+
+func (g *Gateway) PutRating(ctx context.Context, recordID model.RecordID, recordType model.RecordType, rating *ratingmodel.Rating) error {
+	// Create a gRPC connection to the rating service.
+	conn, err := grpcutil.ServiceConnection(ctx, "rating", g.registry)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	// Create a gRPC client for the rating service.
+	client := gen.NewRatingServiceClient(conn)
+	_, err = client.PutRating(ctx, &gen.PutRatingRequest{
+		RecordId:    string(recordID),
+		RecordType:  string(recordType),
+		RatingValue: int32(rating.Value),
+	})
+
+	return err
 }

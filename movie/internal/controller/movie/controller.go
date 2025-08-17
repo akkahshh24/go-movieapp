@@ -43,6 +43,7 @@ func (c *Controller) Get(ctx context.Context, id string) (*model.MovieDetails, e
 	} else if err != nil {
 		return nil, err
 	}
+
 	details := &model.MovieDetails{Metadata: *metadata}
 	rating, err := c.ratingGateway.GetAggregatedRating(ctx, ratingmodel.RecordID(id), ratingmodel.RecordTypeMovie)
 	if err != nil && !errors.Is(err, gateway.ErrNotFound) {
@@ -52,5 +53,6 @@ func (c *Controller) Get(ctx context.Context, id string) (*model.MovieDetails, e
 	} else {
 		details.Rating = &rating
 	}
+
 	return details, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/akkahshh24/movieapp/metadata/internal/repository"
 	"github.com/akkahshh24/movieapp/metadata/pkg/model"
@@ -12,6 +13,7 @@ import (
 // ErrNotFound is returned when a requested record is not found.
 var ErrNotFound = errors.New("not found")
 
+//go:generate mockgen -source=controller.go -destination=../../../../gen/mock/metadata/repository/repository.go -package=repository
 type metadataRepository interface {
 	Get(ctx context.Context, id string) (*model.Metadata, error)
 	Put(ctx context.Context, id string, metadata *model.Metadata) error
@@ -33,7 +35,7 @@ func (c *Controller) Get(ctx context.Context, id string) (*model.Metadata, error
 	// Get the metadata from the cache first.
 	cacheRes, err := c.cache.Get(ctx, id)
 	if err == nil {
-		fmt.Println("Returning metadata from a cache for " + id)
+		log.Println("Returning metadata from cache for " + id)
 		return cacheRes, nil
 	}
 
@@ -41,12 +43,28 @@ func (c *Controller) Get(ctx context.Context, id string) (*model.Metadata, error
 	res, err := c.repo.Get(ctx, id)
 	if err != nil && errors.Is(err, repository.ErrNotFound) {
 		return nil, ErrNotFound
+	} else if err != nil {
+		return nil, err
 	}
 
 	// Update the cache with the retrieved metadata.
 	if err := c.cache.Put(ctx, id, res); err != nil {
-		fmt.Println("Error updating cache: " + err.Error())
+		log.Println("Error updating cache: " + err.Error())
 	}
 
 	return res, err
+}
+
+// Put writes movie metadata to repository.
+func (c *Controller) Put(ctx context.Context, m *model.Metadata) error {
+	if err := c.repo.Put(ctx, m.ID, m); err != nil {
+		return fmt.Errorf("failed to put metadata: %w", err)
+	}
+
+	// Update the cache with the new metadata.
+	if err := c.cache.Put(ctx, m.ID, m); err != nil {
+		return fmt.Errorf("failed to update cache: %w", err)
+	}
+
+	return nil
 }

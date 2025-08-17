@@ -6,6 +6,7 @@ import (
 
 	"github.com/akkahshh24/movieapp/gen"
 	"github.com/akkahshh24/movieapp/metadata/internal/controller/metadata"
+	"github.com/akkahshh24/movieapp/metadata/pkg/model"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -40,4 +41,17 @@ func (h *Handler) GetMetadata(ctx context.Context, req *gen.GetMetadataRequest) 
 
 	// Convert the metadata to the proto response format.
 	return &gen.GetMetadataResponse{Metadata: movieMetaData.ToProto()}, nil
+}
+
+// PutMetadata puts movie metadata to repository.
+func (h *Handler) PutMetadata(ctx context.Context, req *gen.PutMetadataRequest) (*gen.PutMetadataResponse, error) {
+	if req == nil || req.Metadata == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "nil req or metadata")
+	}
+
+	if err := h.ctrl.Put(ctx, model.ProtoToMetadata(req.Metadata)); err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	return &gen.PutMetadataResponse{}, nil
 }

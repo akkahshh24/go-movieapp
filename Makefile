@@ -61,4 +61,19 @@ proto:
 benchmark:
 	cd cmd/sizecompare && go test -bench=.
 
-.PHONY: metadata1 metadata2 metadata3 rating1 rating2 rating3 movie1 movie2 movie3 testrating1 testputrating1 consul kafka create-topic producer mysql create-tables exec-mysql show-tables proto benchmark
+mock:
+	mockgen -source=metadata/internal/controller/metadata/controller.go -destination=gen/mock/metadata/repository/repository.go -package=repository
+
+unit-test:
+	go test -cover ./...
+
+integration-test:
+	go run test/integration/*.go
+
+.PHONY: \
+	metadata1 metadata2 metadata3 \
+	rating1 rating2 rating3 \
+	movie1 movie2 movie3 \
+	testgetrating1 testputrating1 \
+	consul kafka create-topic producer mysql create-tables exec-mysql show-tables \
+	proto benchmark mock unit-test integration-test

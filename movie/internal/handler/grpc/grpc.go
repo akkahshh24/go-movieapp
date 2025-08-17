@@ -37,11 +37,14 @@ func (h *Handler) GetMovieDetails(ctx context.Context, req *gen.GetMovieDetailsR
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
-	// Convert the movie metadata to the gRPC response format.
+	var rating float64
+	if m.Rating != nil {
+		rating = *m.Rating
+	}
 	return &gen.GetMovieDetailsResponse{
 		MovieDetails: &gen.MovieDetails{
 			Metadata: m.Metadata.ToProto(),
-			Rating:   *m.Rating,
+			Rating:   rating,
 		},
 	}, nil
 }
